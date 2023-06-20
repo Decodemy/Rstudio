@@ -1,0 +1,70 @@
+# Load required libraries
+library(ggplot2)
+library(tseries)
+library(forecast)
+library(fpp2)
+library(stlplus)
+
+# Create the data frame with the provided data
+data <- ts(c(3.779, 3.752, 3.698, 3.63, 3.625,
+             3.593, 3.617, 3.805, 3.691, 3.653, 
+             3.7, 3.626, 3.53, 3.55, 3.8, 4.05, 
+             3.43, 3.72, 3.86, 3.61, 3.59, 3.5, 
+             3.5, 3.6, 3.07, 2.7, 2.55, 2.34,
+             2.24, 2.52, 2.406), start = 1991)
+
+# Center align the titles of the plots
+theme_update(plot.title = element_text(hjust = 0.5))
+
+# Plot the Unemployment Rate over time
+autoplot(data, main = "Unemployment Rate Over Time",
+         xlab = "Date", ylab = "Unemployment Rate (%)")
+
+# Specify the periodicity as 12 for monthly data
+data_ts <- ts(data, frequency = 12)
+
+# Perform STL decomposition with specified seasonal periodicity
+data_stl <- stlplus(data_ts, s.window = "periodic")
+
+# Plot the decomposed components
+plot(data_stl)
+
+# Perform the Augmented Dickey-Fuller (ADF) test for stationarity
+adf_test <- adf.test(data)
+print(adf_test)
+
+# Calculate differenced series
+differenced_rate <- diff(data, differences = 2)
+
+# Perform ADF test on differenced series
+adf_test_diff <- adf.test(differenced_rate)
+print(adf_test_diff)
+
+# Plot the differenced series
+autoplot(differenced_rate, main = "Unemployment Rate Time Series",
+         xlab = "Time", ylab = "Unemployment Rate")
+acf(differenced_rate)
+pacf(differenced_rate)
+
+# Fit an ARIMA model to the differenced series
+fit_1 <- auto.arima(differenced_rate,approximation = FALSE, stepwise = FALSE)
+fit_2 <- Arima(differenced_rate, order = c(0, 0, 1)) 
+
+# Evaluate the tested ARIMA models 
+fit_1 # AICc = 2.24
+fit_2 # AICc = 1.5
+
+# Model accuracy evaluation
+accuracy(fit_1) # RMSE = 0.214274
+accuracy(fit_2) # RMSE = 0.2076731
+
+# Since we can see that the the results of both AICc and RMSE are smaller in our 2nd mode (i.e., fit_2), we can say that this model fits more
+# Check residuals of the model
+checkresiduals(fit_2)
+
+# Forecast values
+forecast_values <- forecast(fit_2, h = 9)
+print(forecast_values)
+
+# Plot the forecasted values
+plot(forecast_values)
